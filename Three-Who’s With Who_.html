@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Who’s With Who?</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:radial-gradient(ellipse at 50% 0%,#4a1d8f 0%,#2a0f55 45%,#160733 100%);background-color:#1b0a3c;color:#fff;font-family:"Trebuchet MS",Verdana,system-ui,sans-serif;overflow:hidden;display:flex;flex-direction:column}
+header{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;z-index:3}
+h1{margin:0;font-size:clamp(24px,5vw,40px);line-height:1.1;text-shadow:0 3px 0 #0006}
+small{opacity:.7;font-size:clamp(12px,2.4vw,15px)}
+button{font:inherit;cursor:pointer;border:0;color:#1b0a3c}
+#gear{background:#ffffff22;color:#fff;font-size:26px;width:52px;height:52px;border-radius:50%}
+#stage{flex:1;position:relative;min-height:0}
+#cv{position:absolute;inset:0;width:100%;height:100%;z-index:1}
+#go{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:2;background:linear-gradient(#ffe45c,#ffb800);font-size:clamp(20px,4.4vw,32px);font-weight:800;padding:12px 30px;border-radius:40px;box-shadow:0 6px 0 #b27a00,0 10px 24px #0007;white-space:nowrap}
+#go:active{transform:translateX(-50%) translateY(3px)}
+#go:disabled{opacity:.6;cursor:default}
+.star{position:absolute;pointer-events:none;opacity:.35;animation:spin linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ov{position:fixed;inset:0;background:#0009;z-index:10;display:flex;align-items:center;justify-content:center;padding:14px;overflow:auto}
+.hide{display:none}
+.card{background:linear-gradient(#3b1780,#26104f);border:3px solid #ffd60a;border-radius:24px;padding:18px;width:min(900px,100%);max-height:92%;overflow:auto;box-shadow:0 20px 60px #000a;text-align:center}
+.card h2{margin:0 0 12px;font-size:clamp(26px,5.5vw,44px);position:relative}
+.sp{display:inline-block;animation:spin 3s linear infinite}
+.teams{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:10px 0 16px}
+.t{border-radius:16px;padding:10px;background:#ffffff14;border:3px solid}
+.t h3{margin:0 0 6px;font-size:clamp(20px,3.6vw,28px)}
+.t div{font-size:clamp(18px,3.2vw,24px);font-weight:700;padding:3px 0}
+.btn{background:linear-gradient(#ffe45c,#ffb800);font-size:clamp(18px,4vw,26px);font-weight:800;padding:12px 28px;border-radius:40px;box-shadow:0 5px 0 #b27a00;margin:4px}
+.btn.alt{background:#fff;box-shadow:0 5px 0 #aaa}
+.set{text-align:left}
+.set label,.set .l{display:block;font-size:20px;font-weight:700;margin:14px 0 6px}
+textarea{width:100%;height:170px;font:inherit;font-size:20px;border-radius:12px;border:2px solid #ffd60a;padding:10px;background:#160733;color:#fff;resize:vertical}
+.seg{display:flex;gap:8px;flex-wrap:wrap}
+.seg button{background:#ffffff22;color:#fff;font-size:22px;font-weight:700;min-width:54px;padding:10px 14px;border-radius:14px}
+.seg button.on{background:#ffd60a;color:#1b0a3c}
+.hint{font-size:15px;opacity:.75;margin-top:6px}
+</style></head>
+<body>
+<header><div><h1>Who’s With Who?</h1><small>Created by T.Badria Alfalahi</small></div><button id="gear" aria-label="Settings">⚙️</button></header>
+<main id="stage"><canvas id="cv"></canvas><button id="go">Split the Teams!</button></main>
+
+<div id="result" class="ov hide"><div class="card">
+<h2><span class="sp">⭐</span> 🎉 Here Are the Teams! <span class="sp">⭐</span></h2>
+<div class="teams" id="teams"></div>
+<button class="btn" id="again">Split Again</button><button class="btn alt" id="close">Close</button></div></div>
+
+<div id="settings" class="ov hide"><div class="card set">
+<h2 style="text-align:center">⚙️ Settings</h2>
+<label for="names">Student names (one per line)</label>
+<textarea id="names"></textarea>
+<div class="hint" id="count"></div>
+<div class="l">Number of teams</div><div class="seg" id="sTeams"></div>
+<div class="l">Style</div><div class="seg" id="sShape"></div>
+<div class="l">Sound</div><div class="seg" id="sSound"></div>
+<div class="l">Full screen</div><div class="seg"><button id="fs">Toggle full screen</button></div>
+<div class="hint">Teams are always balanced. If the students don’t divide evenly, teams differ by one at most.</div>
+<div style="text-align:center;margin-top:14px"><button class="btn" id="sClose">Done</button></div>
+</div></div>
+
+<script>
+const $=id=>document.getElementById(id),R=Math.random;
+const TEAMS=[{n:"Red",c:"#ff5d73"},{n:"Cyan",c:"#22d3ee"},{n:"Green",c:"#4ade80"},{n:"Orange",c:"#fb923c"},{n:"Pink",c:"#f472b6"},{n:"Lime",c:"#a3e635"}];
+const BC=["#ff5d73","#22d3ee","#4ade80","#fb923c","#f472b6","#a3e635","#c084fc","#ffffff"],FR=["🍓","🍎","🍊","🍌","🍇","🍉","🍒","🍍"];
+const DEF="Ahmed\nMariam\nKhalid\nAisha\nYusuf\nLayla\nHamad\nNoor\nSara\nSalim\nHuda\nZayd";
+let cfg={names:DEF,teams:6,shape:"ball",sound:true};
+try{Object.assign(cfg,JSON.parse(localStorage.getItem("whowho")||"{}"))}catch(e){}
+const save=()=>{try{localStorage.setItem("whowho",JSON.stringify(cfg))}catch(e){}};
+
+// background stars
+for(let i=0;i<9;i++){const s=document.createElement("span");s.className="star";s.textContent="⭐";
+ s.style.cssText=`left:${R()*95}%;top:${R()*90}%;font-size:${20+R()*34}px;animation-duration:${4+R()*8}s;z-index:0`;document.body.appendChild(s)}
+
+// audio
+let ac=null,lastT=0;
+function A(){if(!cfg.sound)return null;try{if(!ac)ac=new (window.AudioContext||window.webkitAudioContext)();if(ac.state==="suspended")ac.resume();return ac}catch(e){return null}}
+function tone(f,t,d,type,g){const a=A();if(!a)return;const o=a.createOscillator(),v=a.createGain();o.type=type;o.frequency.value=f;
+ const s=a.currentTime+t;v.gain.setValueAtTime(g,s);v.gain.exponentialRampToValueAtTime(.001,s+d);o.connect(v);v.connect(a.destination);o.start(s);o.stop(s+d+.02)}
+function tick(){const n=performance.now();if(n-lastT<28)return;lastT=n;tone(700+R()*500,0,.05,"square",.035)}
+const PENT=[523,587,659,784,880,1047];
+function chime(t){const f=PENT[t%6];tone(f,0,.6,"sine",.18);tone(f*2,0,.35,"sine",.07)}
+function music(){const n=[523,659,784,1047,784,1047,1319,1047,1319,1568];n.forEach((f,i)=>{tone(f,i*.16,.3,"triangle",.14);if(i%2==0)tone(f/2,i*.16,.3,"sine",.1)});tone(1568,1.7,.9,"triangle",.14);tone(1047,1.7,.9,"triangle",.1)}
+
+// canvas
+const cv=$("cv"),ctx=cv.getContext("2d");
+let W,H,dpr,S,u,r,pr,top0,binTop,floorY,pegs=[],n=6,bw,running=false,pend=false,balls=[],queue=[],cnt=[],flash=[],conf=[],spawnT=0,landed=0,total=0,res=[];
+function layout(){const b=cv.parentElement.getBoundingClientRect();dpr=Math.min(devicePixelRatio||1,2);W=b.width;H=b.height;cv.width=W*dpr;cv.height=H*dpr;
+ const cols=W<500?8:12;S=W/cols;u=S/60;pr=Math.max(4,S*.09);r=Math.max(9,S*.2);
+ top0=Math.max(84,H*.14);binTop=H-Math.max(100,H*.2);floorY=H-30;
+ const rows=Math.max(5,Math.floor((binTop-30-top0)/(S*.8))),rh=(binTop-30-top0)/rows;pegs=[];
+ for(let j=0;j<rows;j++){const y=top0+j*rh;if(j%2==0)for(let i=0;i<cols;i++)pegs.push({x:S*(i+.5),y,g:0});else for(let i=1;i<cols;i++)pegs.push({x:S*i,y,g:0})}
+ n=cfg.teams;bw=W/n;pend=false}
+addEventListener("resize",()=>{if(running)pend=true;else layout()});
+
+function shape(x,y,rad,sh,rot){ctx.beginPath();
+ if(sh==="square"){ctx.rect(x-rad,y-rad,rad*2,rad*2)}
+ else if(sh==="star"){for(let i=0;i<10;i++){const a=rot-Math.PI/2+i*Math.PI/5,q=i%2?rad*.5:rad*1.25;ctx[i?"lineTo":"moveTo"](x+Math.cos(a)*q,y+Math.sin(a)*q)}ctx.closePath()}
+ else ctx.arc(x,y,rad,0,7)}
+function slotPos(t,j){const per=Math.max(1,Math.floor((bw-6)/(r*2.2))),c=j%per,rw=Math.floor(j/per);
+ return{x:t*bw+bw/2+(c-(per-1)/2)*r*2.2,y:floorY-r-rw*r*2.1}}
+
+function step(){
+ const g=.12*u;
+ for(const b of balls){
+  if(b.s==="drop"){b.vy+=g*2;b.y+=b.vy;b.x+=(b.sx-b.x)*.25;
+   if(b.y>=b.sy){b.y=b.sy;b.x=b.sx;b.s="done";landed++;flash[b.t]=1;chime(b.t)}continue}
+  if(b.s!=="fall")continue;
+  b.vy+=g;b.vx*=.998;
+  const pg=Math.min(1,Math.max(0,(b.y-top0)/(binTop-top0)));
+  b.vx+=(b.tx-b.x)*.0012*pg*pg*u*1.3;b.vx*=1-.04*pg*pg;
+  const mx=9*u;b.vy=Math.min(b.vy,mx);b.vx=Math.max(-mx,Math.min(mx,b.vx));
+  b.x+=b.vx;b.y+=b.vy;
+  if(b.x<r){b.x=r;b.vx=Math.abs(b.vx)*.5}if(b.x>W-r){b.x=W-r;b.vx=-Math.abs(b.vx)*.5}
+  if(b.y<binTop){
+   for(const p of pegs){if(Math.abs(p.y-b.y)>S)continue;const dx=b.x-p.x,dy=b.y-p.y,d=Math.hypot(dx,dy),m=r+pr;
+    if(d<m&&d>.01){const nx=dx/d,ny=dy/d;b.x=p.x+nx*m;b.y=p.y+ny*m;const vn=b.vx*nx+b.vy*ny;
+     if(vn<0){b.vx-=1.5*vn*nx;b.vy-=1.5*vn*ny}
+     b.vx+=(R()-.5)*1.2*u+(Math.abs(nx)<.15?(R()<.5?-1:1)*.5*u:0);p.g=1;tick()}}
+   if(Math.hypot(b.vx,b.vy)<.25*u){if(++b.k>18){b.vx+=(R()-.5)*3*u;b.k=0}}else b.k=0;
+  }else{
+   const L=b.t*bw+r+2,Rr=(b.t+1)*bw-r-2;if(b.x<L){b.x=L;b.vx=0}if(b.x>Rr){b.x=Rr;b.vx=0}
+   if(b.y>binTop+r*2){const sl=slotPos(b.t,cnt[b.t]++);b.sx=sl.x;b.sy=sl.y;b.s="drop"}}
+ }
+}
+
+function draw(now){
+ ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ // bins
+ for(let t=0;t<n;t++){const c=TEAMS[t].c,f=flash[t]||0;
+  ctx.globalAlpha=.16+f*.4;ctx.fillStyle=c;ctx.fillRect(t*bw,binTop,bw,floorY-binTop+4);ctx.globalAlpha=1;
+  ctx.fillStyle=c;ctx.fillRect(t*bw,floorY+4,bw,H-floorY-4);
+  ctx.fillStyle="#1b0a3c";ctx.font=`bold ${Math.min(16,bw/5)}px "Trebuchet MS",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
+  ctx.fillText(TEAMS[t].n+" "+(cnt[t]||0),t*bw+bw/2,floorY+(H-floorY)/2+2);flash[t]=f*.93}
+ ctx.strokeStyle="#ffffff90";ctx.lineWidth=3;ctx.lineCap="round";
+ for(let t=0;t<=n;t++){ctx.beginPath();ctx.moveTo(t*bw,binTop);ctx.lineTo(t*bw,floorY+4);ctx.stroke()}
+ // pegs
+ for(const p of pegs){ctx.save();ctx.shadowColor="#fff08a";ctx.shadowBlur=22*p.g;ctx.fillStyle=p.g>.05?"#fffbd0":"#ffd60a";
+  ctx.beginPath();ctx.arc(p.x,p.y,pr*(1+.6*p.g),0,7);ctx.fill();ctx.restore();p.g*=.9}
+ // balls
+ const fs=Math.max(15,Math.min(24,S*.22)),rot=now/400;
+ for(const b of balls){
+  const sh=["ball","star","fruit"].includes(cfg.shape)?cfg.shape:"ball",done=b.s==="done",rad=done?r*.85:r*1.1;
+  if(sh==="fruit"){ctx.font=`${rad*2}px serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(b.f,b.x,b.y+rad*.1);if(done)continue}
+  else{ctx.save();ctx.shadowColor="#fff";ctx.shadowBlur=done?0:14;ctx.fillStyle=done?TEAMS[b.t].c:b.c;
+   if(sh==="star")shape(b.x,b.y,rad,"star",rot+b.p);else shape(b.x,b.y,rad,"circle",0);ctx.fill();
+   if(sh==="ball"){ctx.fillStyle="#ffffff70";ctx.beginPath();ctx.arc(b.x-rad*.3,b.y-rad*.3,rad*.28,0,7);ctx.fill()}
+   ctx.restore();if(done)continue}
+  ctx.font=`bold ${fs}px "Trebuchet MS",sans-serif`;ctx.textAlign="center";ctx.textBaseline="alphabetic";
+  const tw=ctx.measureText(b.name).width,tx=Math.max(tw/2+4,Math.min(W-tw/2-4,b.x));
+  ctx.lineWidth=5;ctx.strokeStyle="#1b0a3c";ctx.lineJoin="round";ctx.strokeText(b.name,tx,b.y-r-6);ctx.fillStyle="#fff";ctx.fillText(b.name,tx,b.y-r-6)}
+ // confetti
+ for(const p of conf){p.x+=p.vx;p.y+=p.vy;p.vy+=.12;p.a+=p.va;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.a);ctx.fillStyle=p.c;ctx.fillRect(-5,-3,10,6);ctx.restore()}
+ conf=conf.filter(p=>p.y<H+20);
+}
+
+let last=0,acc=0;
+function loop(now){const dt=Math.min(50,now-(last||now));last=now;
+ if(running){acc+=dt;spawnT-=dt;
+  if(queue.length&&spawnT<=0){const q=queue.shift(),bc=bw*(q.t+.5);
+   balls.push({name:q.name,t:q.t,x:W*(.2+.6*R()),y:-r,vx:(R()-.5)*2*u,vy:0,tx:bc+(R()-.5)*bw*.4,s:"fall",k:0,c:BC[Math.floor(R()*BC.length)],f:FR[Math.floor(R()*FR.length)],p:R()*6});spawnT=Math.min(750,16000/total)*(.7+R()*.6)}
+  while(acc>=16.67){step();acc-=16.67}
+  if(landed===total&&!queue.length){running=false;setTimeout(finish,600)}}
+ else acc=0;
+ draw(now);requestAnimationFrame(loop)}
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function names(){return cfg.names.split("\n").map(s=>s.trim()).filter(Boolean).slice(0,60)}
+function start(){
+ if(running)return;const list=names();
+ if(!list.length){openSet();return}
+ A();layout();n=cfg.teams;bw=W/n;
+ const perm=shuffle([...Array(n).keys()]);
+ queue=shuffle(list.map((nm,i)=>({name:nm,t:perm[i%n]})));
+ res=[...Array(n)].map(()=>[]);queue.forEach(q=>res[q.t].push(q.name));
+ balls=[];cnt=Array(n).fill(0);flash=Array(n).fill(0);conf=[];landed=0;total=queue.length;spawnT=0;running=true;
+ $("go").disabled=true;$("go").textContent="Dropping…";$("result").classList.add("hide")}
+function finish(){
+ $("go").disabled=false;$("go").textContent="Split the Teams!";
+ $("teams").innerHTML=res.map((l,t)=>`<div class="t" style="border-color:${TEAMS[t].c}"><h3 style="color:${TEAMS[t].c}">Team ${TEAMS[t].n} (${l.length})</h3>${l.map(x=>`<div>${x.replace(/</g,"&lt;")}</div>`).join("")}</div>`).join("");
+ $("result").classList.remove("hide");music();
+ const cols=["#ffd60a","#ff5d73","#22d3ee","#4ade80","#f472b6","#fff"];
+ for(let i=0;i<140;i++)conf.push({x:R()*W,y:-R()*H*.5,vx:(R()-.5)*3,vy:R()*3,a:R()*6,va:(R()-.5)*.3,c:cols[i%6]});
+ if(pend)layout()}
+
+$("go").onclick=start;$("again").onclick=start;$("close").onclick=()=>$("result").classList.add("hide");
+
+// settings
+function seg(id,opts,key,after){const el=$(id);el.innerHTML="";
+ opts.forEach(([v,l])=>{const b=document.createElement("button");b.textContent=l;if(cfg[key]===v)b.className="on";
+  b.onclick=()=>{cfg[key]=v;save();[...el.children].forEach(c=>c.className="");b.className="on";after&&after()};el.appendChild(b)})}
+function buildSet(){
+ seg("sTeams",[2,3,4,5,6].map(x=>[x,x]),"teams",()=>{if(!running)layout()});
+ seg("sShape",[["ball","⚽ Balls"],["star","⭐ Stars"],["fruit","🍓 Fruits"]],"shape");
+ seg("sSound",[[true,"🔊 On"],[false,"🔇 Off"]],"sound");
+ $("names").value=cfg.names;cnt2()}
+function cnt2(){const k=names().length;$("count").textContent=k+" student"+(k==1?"":"s")+" · up to 60 names"}
+$("names").oninput=e=>{cfg.names=e.target.value;save();cnt2()};
+function openSet(){buildSet();$("settings").classList.remove("hide")}
+$("gear").onclick=openSet;$("sClose").onclick=()=>$("settings").classList.add("hide");
+$("fs").onclick=()=>{try{document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}catch(e){}};
+layout();requestAnimationFrame(loop);
+</script>
+</body></html>
